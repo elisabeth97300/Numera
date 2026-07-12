@@ -56,7 +56,7 @@ export function Import() {
     }
   }
 
-  function handleDrop(e: DragEvent<HTMLDivElement>) {
+  function handleDrop(e: DragEvent<HTMLLabelElement>) {
     e.preventDefault();
     setIsDragging(false);
     envoyerFichiers(e.dataTransfer.files);
