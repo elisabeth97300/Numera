@@ -48,13 +48,6 @@ def health_check():
 
 # Création automatique des tables au démarrage
 from app.core.database import Base, engine
-from app.models.organisation import Organisation, Utilisateur
-from app.models.client import Client
-from app.models.document import Document
-from app.models.ecriture import Ecriture
-from app.models.exercice import Exercice
-from app.models.habitude import Habitude
-from app.models.proposition import Proposition
-from app.models.releve_bancaire import ReleveBancaire
+from app.models import organisation, client, document, ecriture, exercice, habitude, proposition, releve_bancaire
 
 Base.metadata.create_all(bind=engine)
