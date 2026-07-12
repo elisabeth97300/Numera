@@ -45,3 +45,16 @@ app.include_router(exercices.router_global, prefix=settings.api_v1_prefix)
 def health_check():
     """Utilisé par la plateforme d'hébergement (Railway/Render) pour vérifier que l'app répond."""
     return {"status": "ok", "app": settings.app_name}
+
+# Création automatique des tables au démarrage
+from app.core.database import Base, engine
+from app.models.organisation import Organisation, Utilisateur
+from app.models.client import Client
+from app.models.document import Document
+from app.models.ecriture import Ecriture
+from app.models.exercice import Exercice
+from app.models.habitude import Habitude
+from app.models.proposition import Proposition
+from app.models.releve_bancaire import ReleveBancaire
+
+Base.metadata.create_all(bind=engine)
