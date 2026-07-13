@@ -51,3 +51,46 @@ from app.core.database import Base, engine
 from app.models import organisation, client, document, ecriture, exercice, habitude, proposition, releve_bancaire
 
 Base.metadata.create_all(bind=engine)
+
+# Données temporaires pour le mode démonstration
+from uuid import UUID
+from sqlalchemy import select
+from app.core.database import SessionLocal
+from app.models.organisation import Organisation
+from app.models.client import ClientDossier, RegimeTVA
+
+DEMO_ORGANISATION_ID = UUID("22222222-2222-2222-2222-222222222222")
+DEMO_CLIENT_ID = UUID("11111111-1111-1111-1111-111111111111")
+
+
+def creer_donnees_demo() -> None:
+    db = SessionLocal()
+    try:
+        organisation = db.get(Organisation, DEMO_ORGANISATION_ID)
+        if organisation is None:
+            organisation = Organisation(
+                id=DEMO_ORGANISATION_ID,
+                nom="Organisation Démo",
+                plan_abonnement="demo",
+            )
+            db.add(organisation)
+            db.flush()
+
+        client = db.get(ClientDossier, DEMO_CLIENT_ID)
+        if client is None:
+            client = ClientDossier(
+                id=DEMO_CLIENT_ID,
+                organisation_id=DEMO_ORGANISATION_ID,
+                raison_sociale="Cabinet Démo",
+                siren="000000000",
+                regime_tva=RegimeTVA.REEL_NORMAL,
+                plan_comptable="PCG",
+            )
+            db.add(client)
+
+        db.commit()
+    finally:
+        db.close()
+
+
+creer_donnees_demo()
