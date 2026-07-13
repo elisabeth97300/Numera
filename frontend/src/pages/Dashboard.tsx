@@ -1,125 +1,317 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { ClientPicker } from "../components/ClientPicker";
-import { api, ApiError } from "../lib/api";
 import { useClient } from "../lib/client";
 
-interface Alerte {
-  niveau: "info" | "attention" | "urgent";
-  message: string;
-}
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(value);
 
-const STYLE_NIVEAU: Record<Alerte["niveau"], string> = {
-  urgent: "border-red bg-red/10 text-red",
-  attention: "border-gold bg-gold/10 text-gold",
-  info: "border-rule-strong bg-paper-dim text-ink-soft",
-};
+const kpis = [
+  {
+    label: "Chiffre d’affaires",
+    value: 425800,
+    evolution: "+12,4 %",
+    tone: "positive",
+    description: "Depuis le début de l’exercice",
+  },
+  {
+    label: "Charges d’exploitation",
+    value: 301200,
+    evolution: "+6,8 %",
+    tone: "neutral",
+    description: "Achats, personnel et frais généraux",
+  },
+  {
+    label: "Résultat provisoire",
+    value: 68300,
+    evolution: "+9,2 %",
+    tone: "positive",
+    description: "Avant impôt sur les sociétés",
+  },
+  {
+    label: "Trésorerie disponible",
+    value: 148000,
+    evolution: "2,8 mois",
+    tone: "positive",
+    description: "Couverture estimée des charges fixes",
+  },
+];
+
+const activity = [
+  {
+    title: "Facture fournisseur importée",
+    detail: "EDF — 1 284 €",
+    time: "Il y a 12 min",
+  },
+  {
+    title: "Écriture validée",
+    detail: "Journal achats — pièce FA-2031",
+    time: "Il y a 34 min",
+  },
+  {
+    title: "Anomalie détectée",
+    detail: "Compte 6251 inhabituellement élevé",
+    time: "Il y a 1 h",
+  },
+  {
+    title: "Rapprochement effectué",
+    detail: "Banque BNP — 18 opérations",
+    time: "Il y a 2 h",
+  },
+];
+
+const alerts = [
+  {
+    level: "attention",
+    title: "Charges de personnel élevées",
+    text: "Elles représentent 46 % du chiffre d’affaires.",
+  },
+  {
+    level: "urgent",
+    title: "3 règlements clients en retard",
+    text: "Le montant total en attente est de 18 420 €.",
+  },
+  {
+    level: "info",
+    title: "TVA à préparer",
+    text: "La prochaine échéance est estimée à 13 200 €.",
+  },
+];
 
 export function Dashboard() {
-  const { clients, refreshClients, selectedClientId, selectedExerciceId } = useClient();
-  const [raisonSociale, setRaisonSociale] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [alertes, setAlertes] = useState<Alerte[] | null>(null);
+  const { clients, selectedClientId } = useClient();
 
-  useEffect(() => {
-    if (!selectedClientId || !selectedExerciceId) {
-      setAlertes(null);
-      return;
-    }
-    api
-      .get<Alerte[]>(`/api/v1/clients/${selectedClientId}/alertes?exercice_id=${selectedExerciceId}`)
-      .then(setAlertes)
-      .catch(() => setAlertes(null));
-  }, [selectedClientId, selectedExerciceId]);
-
-  async function handleCreate(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      await api.post("/api/v1/clients", { raison_sociale: raisonSociale });
-      setRaisonSociale("");
-      await refreshClients();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de la création");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const selectedClient =
+    clients.find((client) => client.id === selectedClientId) ?? clients[0];
 
   return (
-    <div>
-      <h1 className="font-display text-2xl font-semibold mb-2">Tableau de bord</h1>
-      <p className="text-ink-soft mb-6">Vue d'ensemble de vos dossiers clients.</p>
+    <div className="min-h-screen bg-[#F6F7F9] p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-7">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-forest">
+              Vue financière
+            </p>
 
-      <ClientPicker requireExercice={false} />
+            <h1 className="font-display text-3xl font-semibold text-ink lg:text-4xl">
+              Bonjour Elisabeth
+            </h1>
 
-      {alertes && alertes.length > 0 && (
-        <div className="mb-8 space-y-2">
-          {alertes.map((a, i) => (
-            <div key={i} className={`border rounded px-4 py-2 text-sm ${STYLE_NIVEAU[a.niveau]}`}>
-              {a.message}
-            </div>
+            <p className="mt-2 text-sm text-ink-soft">
+              Voici la situation du dossier{" "}
+              <span className="font-semibold text-ink">
+                {selectedClient?.raison_sociale ?? "Cabinet Démo"}
+              </span>
+              .
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <select className="rounded-xl border border-[#D8DDD8] bg-white px-4 py-3 text-sm font-medium text-ink shadow-sm outline-none">
+              <option>Exercice 2026</option>
+              <option>Exercice 2025</option>
+            </select>
+
+            <button className="rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">
+              Importer un document
+            </button>
+          </div>
+        </header>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {kpis.map((kpi) => (
+            <article
+              key={kpi.label}
+              className="rounded-2xl border border-[#E3E7E3] bg-white p-5 shadow-[0_8px_30px_rgba(22,35,28,0.05)]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-ink-soft">{kpi.label}</p>
+
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    kpi.tone === "positive"
+                      ? "bg-[#E8F4EB] text-[#246236]"
+                      : "bg-[#F1F2EE] text-ink-soft"
+                  }`}
+                >
+                  {kpi.evolution}
+                </span>
+              </div>
+
+              <p className="mt-4 text-2xl font-bold tracking-tight text-ink">
+                {formatCurrency(kpi.value)}
+              </p>
+
+              <p className="mt-2 text-xs leading-5 text-ink-soft">
+                {kpi.description}
+              </p>
+            </article>
           ))}
-        </div>
-      )}
+        </section>
 
-      <div className="grid grid-cols-3 gap-4 mb-10">
-        <div className="border border-rule-strong rounded p-5 bg-white">
-          <div className="text-sm text-ink-soft mb-1">Dossiers actifs</div>
-          <div className="font-display text-3xl font-semibold text-forest">{clients.length}</div>
-        </div>
-        <div className="border border-rule-strong rounded p-5 bg-white">
-          <div className="text-sm text-ink-soft mb-1">Propositions en attente</div>
-          <div className="font-display text-lg font-semibold text-red">Voir « Validation »</div>
-        </div>
-        <div className="border border-rule-strong rounded p-5 bg-white">
-          <div className="text-sm text-ink-soft mb-1">Assistant financier</div>
-          <div className="font-display text-lg font-semibold">Voir « Assistant IA »</div>
-        </div>
-      </div>
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
+            <p className="text-sm text-ink-soft">TVA à décaisser</p>
+            <p className="mt-3 text-2xl font-bold text-ink">13 200 €</p>
+            <p className="mt-2 text-xs text-gold">Échéance dans 18 jours</p>
+          </article>
 
-      <div className="grid grid-cols-[1fr_320px] gap-8">
-        <div>
-          <h2 className="font-display text-lg font-semibold mb-3">Dossiers clients</h2>
-          {clients.length === 0 && (
-            <div className="border border-dashed border-rule-strong rounded p-8 text-center text-ink-soft">
-              Aucun dossier client — créez-en un avec le formulaire à droite.
+          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
+            <p className="text-sm text-ink-soft">Documents à traiter</p>
+            <p className="mt-3 text-2xl font-bold text-ink">18</p>
+            <p className="mt-2 text-xs text-ink-soft">6 importés aujourd’hui</p>
+          </article>
+
+          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
+            <p className="text-sm text-ink-soft">Écritures à valider</p>
+            <p className="mt-3 text-2xl font-bold text-ink">42</p>
+            <p className="mt-2 text-xs text-red">7 à vérifier en priorité</p>
+          </article>
+
+          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
+            <p className="text-sm text-ink-soft">Taux de rapprochement</p>
+            <p className="mt-3 text-2xl font-bold text-ink">97 %</p>
+            <p className="mt-2 text-xs text-forest">+4 points ce mois-ci</p>
+          </article>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-6 shadow-[0_8px_30px_rgba(22,35,28,0.04)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-ink">
+                  Activité financière
+                </h2>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Évolution du chiffre d’affaires et des charges.
+                </p>
+              </div>
+
+              <select className="rounded-lg border border-[#D8DDD8] bg-white px-3 py-2 text-xs text-ink">
+                <option>12 derniers mois</option>
+                <option>6 derniers mois</option>
+              </select>
             </div>
-          )}
-          {clients.length > 0 && (
-            <div className="border border-rule-strong rounded bg-white overflow-hidden">
-              {clients.map((c) => (
-                <div key={c.id} className="px-5 py-3 border-b border-rule last:border-b-0 flex justify-between">
-                  <span className="font-medium">{c.raison_sociale}</span>
-                  <span className="text-sm text-ink-soft font-mono">{c.regime_tva}</span>
+
+            <div className="mt-8 flex h-64 items-end gap-3 border-b border-l border-[#E4E8E4] px-4 pb-3">
+              {[42, 54, 49, 61, 68, 73, 65, 76, 81, 78, 88, 94].map(
+                (height, index) => (
+                  <div
+                    key={index}
+                    className="group flex flex-1 items-end justify-center"
+                  >
+                    <div
+                      className="w-full max-w-8 rounded-t-md bg-forest/80 transition group-hover:bg-forest"
+                      style={{ height: `${height}%` }}
+                      title={`${height * 5000} €`}
+                    />
+                  </div>
+                ),
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center gap-6 text-xs text-ink-soft">
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-forest" />
+                Chiffre d’affaires
+              </span>
+
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-rule-strong" />
+                Charges
+              </span>
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-6 shadow-[0_8px_30px_rgba(22,35,28,0.04)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-ink">Alertes IA</h2>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Points nécessitant votre attention.
+                </p>
+              </div>
+
+              <span className="rounded-full bg-[#FFF3DD] px-3 py-1 text-xs font-semibold text-gold">
+                3 alertes
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {alerts.map((alert) => (
+                <div
+                  key={alert.title}
+                  className={`rounded-xl border p-4 ${
+                    alert.level === "urgent"
+                      ? "border-red/20 bg-red/5"
+                      : alert.level === "attention"
+                        ? "border-gold/20 bg-gold/5"
+                        : "border-rule bg-paper-dim/30"
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-ink">{alert.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-ink-soft">
+                    {alert.text}
+                  </p>
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </article>
+        </section>
 
-        <form onSubmit={handleCreate} className="border border-rule-strong rounded bg-white p-5 h-fit">
-          <h2 className="font-display font-semibold mb-3">Nouveau dossier client</h2>
-          {error && <div className="text-sm text-red mb-3">{error}</div>}
-          <label className="block text-sm font-medium mb-1" htmlFor="raison-sociale">
-            Raison sociale
-          </label>
-          <input
-            id="raison-sociale"
-            required
-            value={raisonSociale}
-            onChange={(e) => setRaisonSociale(e.target.value)}
-            className="w-full mb-4 px-3 py-2 border border-rule-strong rounded text-sm focus:outline-none focus:ring-2 focus:ring-forest"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-forest text-paper font-semibold py-2 rounded text-sm hover:bg-[#233f28] disabled:opacity-60"
-          >
-            {loading ? "Création..." : "Créer le dossier"}
-          </button>
-        </form>
+        <section className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-6">
+            <h2 className="text-lg font-semibold text-ink">
+              Dernières activités
+            </h2>
+
+            <div className="mt-5 divide-y divide-[#EEF0EE]">
+              {activity.map((item) => (
+                <div
+                  key={`${item.title}-${item.time}`}
+                  className="flex items-start justify-between gap-5 py-4 first:pt-0"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-ink">
+                      {item.title}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-soft">{item.detail}</p>
+                  </div>
+
+                  <span className="whitespace-nowrap text-xs text-ink-soft">
+                    {item.time}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="rounded-2xl bg-[#15241B] p-6 text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#AFC9B5]">
+              Synthèse IA
+            </p>
+
+            <h2 className="mt-3 text-xl font-semibold">
+              Une activité en croissance, avec une marge à surveiller.
+            </h2>
+
+            <p className="mt-4 text-sm leading-6 text-[#D5DFD7]">
+              Le chiffre d’affaires progresse de 12,4 %, mais les charges
+              augmentent plus rapidement sur les deux derniers mois. La
+              trésorerie reste confortable.
+            </p>
+
+            <button className="mt-6 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#15241B]">
+              Voir l’analyse complète
+            </button>
+          </article>
+        </section>
+
+        <p className="text-center text-xs text-ink-soft">
+          Données de démonstration — les indicateurs réels seront calculés
+          depuis les écritures validées.
+        </p>
       </div>
     </div>
   );
