@@ -2,11 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import type { ReactNode } from "react";
 import { AuthProvider } from "./lib/auth";
 import { ClientProvider } from "./lib/client";
-import { RequireAuth } from "./components/RequireAuth";
 import { Layout } from "./components/Layout";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
-import { Dashboard } from "./pages/Dashboard";
 import { Assistant } from "./pages/Assistant";
 import { Import } from "./pages/Import";
 import { Validation } from "./pages/Validation";
@@ -17,11 +15,9 @@ import { Analyse } from "./pages/Analyse";
 
 function ProtectedLayout({ children }: { children: ReactNode }) {
   return (
-    <RequireAuth>
-      <ClientProvider>
-        <Layout>{children}</Layout>
-      </ClientProvider>
-    </RequireAuth>
+    <ClientProvider>
+      <Layout>{children}</Layout>
+    </ClientProvider>
   );
 }
 
@@ -36,7 +32,7 @@ export function App() {
             path="/"
             element={
               <ProtectedLayout>
-                <Dashboard />
+                <Import />
               </ProtectedLayout>
             }
           />
