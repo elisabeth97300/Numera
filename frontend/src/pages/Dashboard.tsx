@@ -1,317 +1,227 @@
+import { useNavigate } from "react-router-dom";
 import { useClient } from "../lib/client";
 
-const formatCurrency = (value: number) =>
+const money = (value: number) =>
   new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(value);
 
-const kpis = [
-  {
-    label: "Chiffre d’affaires",
-    value: 425800,
-    evolution: "+12,4 %",
-    tone: "positive",
-    description: "Depuis le début de l’exercice",
-  },
-  {
-    label: "Charges d’exploitation",
-    value: 301200,
-    evolution: "+6,8 %",
-    tone: "neutral",
-    description: "Achats, personnel et frais généraux",
-  },
-  {
-    label: "Résultat provisoire",
-    value: 68300,
-    evolution: "+9,2 %",
-    tone: "positive",
-    description: "Avant impôt sur les sociétés",
-  },
-  {
-    label: "Trésorerie disponible",
-    value: 148000,
-    evolution: "2,8 mois",
-    tone: "positive",
-    description: "Couverture estimée des charges fixes",
-  },
-];
+const revenue = [28, 34, 31, 42, 47, 51, 49, 58, 63, 61, 70, 76];
+const expenses = [21, 23, 24, 27, 30, 33, 32, 35, 39, 38, 42, 45];
+const months = ["Aoû", "Sep", "Oct", "Nov", "Déc", "Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil"];
 
-const activity = [
-  {
-    title: "Facture fournisseur importée",
-    detail: "EDF — 1 284 €",
-    time: "Il y a 12 min",
-  },
-  {
-    title: "Écriture validée",
-    detail: "Journal achats — pièce FA-2031",
-    time: "Il y a 34 min",
-  },
-  {
-    title: "Anomalie détectée",
-    detail: "Compte 6251 inhabituellement élevé",
-    time: "Il y a 1 h",
-  },
-  {
-    title: "Rapprochement effectué",
-    detail: "Banque BNP — 18 opérations",
-    time: "Il y a 2 h",
-  },
+const tasks = [
+  { label: "Documents à traiter", value: 18, detail: "6 reçus aujourd’hui", className: "bg-amber-50 text-amber-700 border-amber-100" },
+  { label: "Écritures à valider", value: 42, detail: "7 prioritaires", className: "bg-rose-50 text-rose-700 border-rose-100" },
+  { label: "Opérations à rapprocher", value: 13, detail: "Banque principale", className: "bg-sky-50 text-sky-700 border-sky-100" },
+  { label: "Alertes IA", value: 3, detail: "Analyse recommandée", className: "bg-violet-50 text-violet-700 border-violet-100" },
 ];
 
 const alerts = [
-  {
-    level: "attention",
-    title: "Charges de personnel élevées",
-    text: "Elles représentent 46 % du chiffre d’affaires.",
-  },
-  {
-    level: "urgent",
-    title: "3 règlements clients en retard",
-    text: "Le montant total en attente est de 18 420 €.",
-  },
-  {
-    level: "info",
-    title: "TVA à préparer",
-    text: "La prochaine échéance est estimée à 13 200 €.",
-  },
+  { title: "Marge brute en baisse", detail: "La marge recule de 3,2 points sur les trois derniers mois.", badge: "Priorité haute", tone: "bg-rose-50 text-rose-700" },
+  { title: "Encours clients à surveiller", detail: "18 420 € de factures ont dépassé leur date d’échéance.", badge: "À relancer", tone: "bg-amber-50 text-amber-700" },
+  { title: "TVA à provisionner", detail: "Le prochain décaissement est estimé à 13 200 €.", badge: "Dans 18 jours", tone: "bg-sky-50 text-sky-700" },
 ];
 
-export function Dashboard() {
-  const { clients, selectedClientId } = useClient();
+const activity = [
+  { title: "Facture EDF analysée", detail: "Achat • 1 284 €", time: "Il y a 12 min" },
+  { title: "18 opérations rapprochées", detail: "Banque BNP", time: "Il y a 34 min" },
+  { title: "Écriture FA-2031 validée", detail: "Journal achats", time: "Il y a 1 h" },
+  { title: "Prévision de TVA mise à jour", detail: "Juillet 2026", time: "Il y a 2 h" },
+];
 
-  const selectedClient =
-    clients.find((client) => client.id === selectedClientId) ?? clients[0];
+function Sparkline({ values }: { values: number[] }) {
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const points = values
+    .map((value, index) => {
+      const x = (index / (values.length - 1)) * 120;
+      const y = 42 - ((value - min) / Math.max(max - min, 1)) * 34;
+      return `${x},${y}`;
+    })
+    .join(" ");
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-7">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <svg viewBox="0 0 120 48" className="h-12 w-28 overflow-visible">
+      <polyline points={points} fill="none" stroke="#059669" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Dashboard() {
+  const navigate = useNavigate();
+  const { clients, selectedClientId } = useClient();
+  const client = clients.find((item) => item.id === selectedClientId) ?? clients[0];
+
+  return (
+    <div className="min-h-screen bg-[#f5f7f6] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+      <div className="mx-auto max-w-[1500px] space-y-6">
+        <header className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-forest">
-              Vue financière
-            </p>
-
-            <h1 className="font-display text-3xl font-semibold text-ink lg:text-4xl">
-              Bonjour Elisabeth
-            </h1>
-
-            <p className="mt-2 text-sm text-ink-soft">
-              Voici la situation du dossier{" "}
-              <span className="font-semibold text-ink">
-                {selectedClient?.raison_sociale ?? "Cabinet Démo"}
-              </span>
-              .
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,.12)]" />
+              Activité mise à jour à l’instant
+            </div>
+            <h1 className="font-['Manrope'] text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Bonjour Elisabeth</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Voici l’essentiel pour <span className="font-semibold text-slate-800">{client?.raison_sociale ?? "Cabinet Démo"}</span>.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <select className="rounded-xl border border-[#D8DDD8] bg-white px-4 py-3 text-sm font-medium text-ink shadow-sm outline-none">
-              <option>Exercice 2026</option>
-              <option>Exercice 2025</option>
-            </select>
-
-            <button className="rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">
-              Importer un document
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => navigate("/assistant")} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              ✦ Demander à Numera AI
+            </button>
+            <button onClick={() => navigate("/import")} className="rounded-xl bg-emerald-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-900">
+              ＋ Ajouter un document
             </button>
           </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {kpis.map((kpi) => (
-            <article
-              key={kpi.label}
-              className="rounded-2xl border border-[#E3E7E3] bg-white p-5 shadow-[0_8px_30px_rgba(22,35,28,0.05)]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-ink-soft">{kpi.label}</p>
-
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    kpi.tone === "positive"
-                      ? "bg-[#E8F4EB] text-[#246236]"
-                      : "bg-[#F1F2EE] text-ink-soft"
-                  }`}
-                >
-                  {kpi.evolution}
-                </span>
+          {[
+            { label: "Chiffre d’affaires", value: money(425800), trend: "+12,4 %", note: "vs exercice précédent", values: [21,24,23,29,31,35,34,39,44,42,49,54] },
+            { label: "Charges d’exploitation", value: money(301200), trend: "+6,8 %", note: "vs exercice précédent", values: [18,19,20,21,24,23,25,27,29,30,31,34] },
+            { label: "Résultat provisoire", value: money(68300), trend: "+9,2 %", note: "avant impôt", values: [10,12,9,14,16,15,18,17,21,22,24,27] },
+            { label: "Trésorerie disponible", value: money(148000), trend: "2,8 mois", note: "de charges couvertes", values: [32,31,34,35,37,36,39,41,40,43,46,48] },
+          ].map((kpi) => (
+            <article key={kpi.label} className="group rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,.045)] transition hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(15,23,42,.08)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">{kpi.label}</p>
+                  <p className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{kpi.value}</p>
+                  <div className="mt-3 flex items-center gap-2 text-xs">
+                    <span className="rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700">↗ {kpi.trend}</span>
+                    <span className="text-slate-400">{kpi.note}</span>
+                  </div>
+                </div>
+                <Sparkline values={kpi.values} />
               </div>
-
-              <p className="mt-4 text-2xl font-bold tracking-tight text-ink">
-                {formatCurrency(kpi.value)}
-              </p>
-
-              <p className="mt-2 text-xs leading-5 text-ink-soft">
-                {kpi.description}
-              </p>
             </article>
           ))}
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
-            <p className="text-sm text-ink-soft">TVA à décaisser</p>
-            <p className="mt-3 text-2xl font-bold text-ink">13 200 €</p>
-            <p className="mt-2 text-xs text-gold">Échéance dans 18 jours</p>
-          </article>
-
-          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
-            <p className="text-sm text-ink-soft">Documents à traiter</p>
-            <p className="mt-3 text-2xl font-bold text-ink">18</p>
-            <p className="mt-2 text-xs text-ink-soft">6 importés aujourd’hui</p>
-          </article>
-
-          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
-            <p className="text-sm text-ink-soft">Écritures à valider</p>
-            <p className="mt-3 text-2xl font-bold text-ink">42</p>
-            <p className="mt-2 text-xs text-red">7 à vérifier en priorité</p>
-          </article>
-
-          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-5">
-            <p className="text-sm text-ink-soft">Taux de rapprochement</p>
-            <p className="mt-3 text-2xl font-bold text-ink">97 %</p>
-            <p className="mt-2 text-xs text-forest">+4 points ce mois-ci</p>
-          </article>
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {tasks.map((task) => (
+            <button key={task.label} className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-lg font-bold ${task.className}`}>{task.value}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-slate-900">{task.label}</span>
+                <span className="mt-1 block text-xs text-slate-400">{task.detail}</span>
+              </span>
+              <span className="ml-auto text-slate-300">›</span>
+            </button>
+          ))}
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-6 shadow-[0_8px_30px_rgba(22,35,28,0.04)]">
-            <div className="flex items-center justify-between">
+        <section className="grid gap-6 xl:grid-cols-[1.55fr_.85fr]">
+          <article className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,.045)] sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-ink">
-                  Activité financière
-                </h2>
-                <p className="mt-1 text-sm text-ink-soft">
-                  Évolution du chiffre d’affaires et des charges.
-                </p>
+                <h2 className="font-['Manrope'] text-lg font-bold text-slate-950">Performance financière</h2>
+                <p className="mt-1 text-sm text-slate-500">Évolution mensuelle du chiffre d’affaires et des charges.</p>
               </div>
-
-              <select className="rounded-lg border border-[#D8DDD8] bg-white px-3 py-2 text-xs text-ink">
+              <select className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none">
                 <option>12 derniers mois</option>
                 <option>6 derniers mois</option>
               </select>
             </div>
 
-            <div className="mt-8 flex h-64 items-end gap-3 border-b border-l border-[#E4E8E4] px-4 pb-3">
-              {[42, 54, 49, 61, 68, 73, 65, 76, 81, 78, 88, 94].map(
-                (height, index) => (
-                  <div
-                    key={index}
-                    className="group flex flex-1 items-end justify-center"
-                  >
-                    <div
-                      className="w-full max-w-8 rounded-t-md bg-forest/80 transition group-hover:bg-forest"
-                      style={{ height: `${height}%` }}
-                      title={`${height * 5000} €`}
-                    />
+            <div className="mt-8 grid h-72 grid-cols-12 items-end gap-2 sm:gap-3">
+              {revenue.map((value, index) => (
+                <div key={months[index]} className="flex h-full flex-col justify-end gap-2">
+                  <div className="flex flex-1 items-end justify-center gap-1">
+                    <div className="w-2.5 rounded-t-md bg-emerald-700 hover:bg-emerald-600 sm:w-4" style={{ height: `${value}%` }} />
+                    <div className="w-2.5 rounded-t-md bg-slate-200 hover:bg-slate-300 sm:w-4" style={{ height: `${expenses[index]}%` }} />
                   </div>
-                ),
-              )}
+                  <span className="text-center text-[10px] font-medium text-slate-400 sm:text-xs">{months[index]}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="mt-4 flex items-center gap-6 text-xs text-ink-soft">
-              <span className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-forest" />
-                Chiffre d’affaires
-              </span>
-
-              <span className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-rule-strong" />
-                Charges
-              </span>
+            <div className="mt-5 flex flex-wrap items-center gap-5 border-t border-slate-100 pt-4 text-xs font-medium text-slate-500">
+              <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-700" /> Chiffre d’affaires</span>
+              <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-slate-300" /> Charges</span>
+              <span className="ml-auto font-semibold text-emerald-700">Marge actuelle : 16,0 %</span>
             </div>
           </article>
 
-          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-6 shadow-[0_8px_30px_rgba(22,35,28,0.04)]">
+          <article className="relative overflow-hidden rounded-3xl bg-[#102019] p-6 text-white shadow-xl shadow-emerald-950/15">
+            <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-emerald-300/10 blur-2xl" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-emerald-200">✦ Numera AI</span>
+                <span className="text-xs text-white/35">Analyse du jour</span>
+              </div>
+              <h2 className="mt-6 font-['Manrope'] text-2xl font-bold leading-tight">La croissance reste solide, mais votre marge mérite une attention particulière.</h2>
+              <p className="mt-4 text-sm leading-6 text-white/65">Le chiffre d’affaires progresse de 12,4 %. Les charges augmentent toutefois plus vite depuis trois mois.</p>
+              <div className="mt-6 space-y-3">
+                {["Relancer 3 factures échues", "Analyser les charges de personnel", "Provisionner la TVA de juillet"].map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300 text-xs font-bold text-emerald-950">✓</span>
+                    <span className="text-sm font-medium text-white/85">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => navigate("/analyse")} className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-bold text-emerald-950 transition hover:-translate-y-0.5 hover:bg-emerald-50">Ouvrir l’analyse complète</button>
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-2">
+          <article className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-ink">Alertes IA</h2>
-                <p className="mt-1 text-sm text-ink-soft">
-                  Points nécessitant votre attention.
-                </p>
+                <h2 className="font-['Manrope'] text-lg font-bold text-slate-950">Alertes à traiter</h2>
+                <p className="mt-1 text-sm text-slate-500">Priorités détectées automatiquement.</p>
               </div>
-
-              <span className="rounded-full bg-[#FFF3DD] px-3 py-1 text-xs font-semibold text-gold">
-                3 alertes
-              </span>
+              <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">3 alertes</span>
             </div>
-
             <div className="mt-5 space-y-3">
               {alerts.map((alert) => (
-                <div
-                  key={alert.title}
-                  className={`rounded-xl border p-4 ${
-                    alert.level === "urgent"
-                      ? "border-red/20 bg-red/5"
-                      : alert.level === "attention"
-                        ? "border-gold/20 bg-gold/5"
-                        : "border-rule bg-paper-dim/30"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-ink">{alert.title}</p>
-                  <p className="mt-1 text-xs leading-5 text-ink-soft">
-                    {alert.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
-          <article className="rounded-2xl border border-[#E3E7E3] bg-white p-6">
-            <h2 className="text-lg font-semibold text-ink">
-              Dernières activités
-            </h2>
-
-            <div className="mt-5 divide-y divide-[#EEF0EE]">
-              {activity.map((item) => (
-                <div
-                  key={`${item.title}-${item.time}`}
-                  className="flex items-start justify-between gap-5 py-4 first:pt-0"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-ink">
-                      {item.title}
-                    </p>
-                    <p className="mt-1 text-xs text-ink-soft">{item.detail}</p>
+                <div key={alert.title} className="flex gap-4 rounded-2xl border border-slate-100 p-4 transition hover:bg-slate-50">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold ${alert.tone}`}>!</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-semibold text-slate-900">{alert.title}</p>
+                      <span className="text-xs font-semibold text-slate-400">{alert.badge}</span>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">{alert.detail}</p>
                   </div>
-
-                  <span className="whitespace-nowrap text-xs text-ink-soft">
-                    {item.time}
-                  </span>
                 </div>
               ))}
             </div>
           </article>
 
-          <article className="rounded-2xl bg-[#15241B] p-6 text-white">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#AFC9B5]">
-              Synthèse IA
-            </p>
-
-            <h2 className="mt-3 text-xl font-semibold">
-              Une activité en croissance, avec une marge à surveiller.
-            </h2>
-
-            <p className="mt-4 text-sm leading-6 text-[#D5DFD7]">
-              Le chiffre d’affaires progresse de 12,4 %, mais les charges
-              augmentent plus rapidement sur les deux derniers mois. La
-              trésorerie reste confortable.
-            </p>
-
-            <button className="mt-6 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#15241B]">
-              Voir l’analyse complète
-            </button>
+          <article className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-['Manrope'] text-lg font-bold text-slate-950">Activité récente</h2>
+                <p className="mt-1 text-sm text-slate-500">Ce que Numera a traité pour vous.</p>
+              </div>
+              <button className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">Tout voir</button>
+            </div>
+            <div className="mt-5 divide-y divide-slate-100">
+              {activity.map((item) => (
+                <div key={item.title} className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-sm font-bold text-emerald-700">✓</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                    <p className="mt-1 text-xs text-slate-400">{item.detail}</p>
+                  </div>
+                  <span className="whitespace-nowrap text-xs text-slate-400">{item.time}</span>
+                </div>
+              ))}
+            </div>
           </article>
         </section>
 
-        <p className="text-center text-xs text-ink-soft">
-          Données de démonstration — les indicateurs réels seront calculés
-          depuis les écritures validées.
-        </p>
+        <footer className="flex flex-col gap-2 border-t border-slate-200/70 py-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+          <span>Données de démonstration • Connexion aux écritures réelles à venir</span>
+          <span>Dernière synchronisation : aujourd’hui à 09:48</span>
+        </footer>
       </div>
     </div>
   );
